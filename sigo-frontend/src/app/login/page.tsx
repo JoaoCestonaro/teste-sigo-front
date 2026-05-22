@@ -29,7 +29,30 @@ export default function LoginPage() {
     } else {
       const message =
         typeof result.data === "object" && result.data
-          ? (result.data as { Message?: string }).Message
+          ? ((result.data as {
+              message?: string;
+              Message?: string;
+              detail?: string;
+              title?: string;
+            }).detail ??
+              (result.data as {
+                message?: string;
+                Message?: string;
+                detail?: string;
+                title?: string;
+              }).message ??
+              (result.data as {
+                message?: string;
+                Message?: string;
+                detail?: string;
+                title?: string;
+              }).Message ??
+              (result.data as {
+                message?: string;
+                Message?: string;
+                detail?: string;
+                title?: string;
+              }).title)
           : null;
       setError(message ?? "Login failed");
     }

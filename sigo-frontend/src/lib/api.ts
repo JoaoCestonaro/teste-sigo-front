@@ -25,6 +25,16 @@ const parseResponse = async (response: Response) => {
   }
 };
 
+const buildNetworkErrorMessage = (
+  error: unknown,
+  url: string,
+  method: string
+) => {
+  const baseMessage =
+    error instanceof Error ? error.message : "Failed to reach the API";
+  return `${baseMessage}. Request: ${method} ${url}. Check API base URL and server availability.`;
+};
+
 export async function fetchJson(
   baseUrl: string,
   path: string,
@@ -61,10 +71,11 @@ export async function fetchJson(
       ok: false,
       status: 0,
       data: {
-        Message:
-          error instanceof Error
-            ? error.message
-            : "Failed to reach the API",
+        Message: buildNetworkErrorMessage(
+          error,
+          url,
+          options.method ?? "GET"
+        ),
       },
     };
   }

@@ -1,12 +1,10 @@
 "use client";
 
-import { createContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import type { ApiResult } from "@/lib/api";
 import { fetchJson } from "@/lib/api";
+import { authStorage } from "@/lib/auth-storage";
 import type { AuthContextValue, AuthLoginPayload } from "@/models/auth";
-
-const STORAGE_TOKEN = "sigo.token";
-const STORAGE_BASE_URL = "sigo.baseUrl";
 
 const defaultBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5044";
@@ -20,39 +18,66 @@ const loginRoutes: Record<AuthLoginPayload["role"], string> = {
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [baseUrl, setBaseUrl] = useState(defaultBaseUrl);
+  const [baseUrl, setBaseUrlState] = useState(defaultBaseUrl);
   const [token, setToken] = useState("");
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const storedBaseUrl = localStorage.getItem(STORAGE_BASE_URL);
-    const storedToken = localStorage.getItem(STORAGE_TOKEN);
-    if (storedBaseUrl) setBaseUrl(storedBaseUrl);
+    const storedToken = authStorage.get();
     if (storedToken) setToken(storedToken);
     setIsReady(true);
   }, []);
 
   useEffect(() => {
     if (!isReady) return;
-    localStorage.setItem(STORAGE_BASE_URL, baseUrl);
     if (token) {
-      localStorage.setItem(STORAGE_TOKEN, token);
+      authStorage.set(token);
     } else {
-      localStorage.removeItem(STORAGE_TOKEN);
+      authStorage.clear();
     }
-  }, [baseUrl, token, isReady]);
+  }, [token, isReady]);
+
+  const setBaseUrl = useCallback((value: string) => {
+    if (value !== defaultBaseUrl) {
+      setBaseUrlState(defaultBaseUrl);
+      return;
+    }
+    setBaseUrlState(value);
+  }, []);
 
   const login = async (payload: AuthLoginPayload): Promise<ApiResult> => {
+    const normalizedEmail = payload.email.trim().toLowerCase();
     const result = await fetchJson(baseUrl, loginRoutes[payload.role], {
       method: "POST",
       body: {
-        Email: payload.email,
-        Password: payload.password,
+        email: normalizedEmail,
+        password: payload.password,
       },
     });
 
     if (result.ok && typeof result.data === "object" && result.data) {
-      const tokenValue = (result.data as { Data?: string }).Data ?? "";
+      const pickToken = (value: unknown): string | null => {
+        if (!value || typeof value !== "object") return null;
+        const record = value as { token?: string; Token?: string };
+        return record.token ?? record.Token ?? null;
+      };
+      const envelope = result.data as {
+        data?: { token?: string; Token?: string } | string | null;
+        Data?: { Token?: string; token?: string } | string | null;
+        token?: string;
+        Token?: string;
+      };
+      const tokenValue =
+        (typeof envelope.data === "string" ? envelope.data : null) ??
+        (typeof envelope.Data === "string" ? envelope.Data : null) ??
+        pickToken(envelope.data) ??
+        pickToken(envelope.Data) ??
+        envelope.token ??
+        envelope.Token ??
+        "";
+      if (tokenValue) setToken(tokenValue);
+    } else if (result.ok && typeof result.data === "string") {
+      const tokenValue = result.data.trim();
       if (tokenValue) setToken(tokenValue);
     }
 

@@ -1,0 +1,343 @@
+import type {
+  CrudConfig,
+  ListFieldConfig,
+  SearchConfig,
+  ActionConfig,
+} from "@/components/CrudPanel";
+
+const telefoneTemplate = {
+  Id: 0,
+  Numero: "",
+  DDD: 0,
+  ClienteId: 0,
+};
+
+const pedidoPecaTemplate = {
+  IdPedido: 0,
+  IdPeca: 0,
+  Quantidade: 0,
+  DataInstalacao: "2026-01-01",
+  Estado: "",
+  Observacao: "",
+};
+
+const pedidoServicoTemplate = {
+  IdPedido: 0,
+  IdServico: 0,
+  QuantVezes: 1,
+};
+
+const funcionarioServicoTemplate = {
+  IdFuncionario: 0,
+  IdServico: 0,
+  TempoDec: "",
+};
+
+const clienteListFields: ListFieldConfig[] = [
+  {
+    key: "Telefones",
+    label: "Telefone",
+    itemTemplate: telefoneTemplate,
+  },
+];
+
+const servicoListFields: ListFieldConfig[] = [
+  {
+    key: "Funcionario_Servicos",
+    label: "Funcionario_Servico",
+    itemTemplate: funcionarioServicoTemplate,
+  },
+];
+
+const pedidoListFields: ListFieldConfig[] = [
+  {
+    key: "Pedido_Pecas",
+    label: "Pedido_Peca",
+    itemTemplate: pedidoPecaTemplate,
+  },
+  {
+    key: "Pedido_Servicos",
+    label: "Pedido_Servico",
+    itemTemplate: pedidoServicoTemplate,
+  },
+];
+
+const clienteSearches: SearchConfig[] = [
+  {
+    label: "Nome",
+    placeholder: "nome",
+    path: (value) => `/api/clientes/nome/${value}`,
+  },
+  {
+    label: "Oficina",
+    placeholder: "oficinaId",
+    path: (value) => `/api/clientes/oficinas/${value}`,
+  },
+];
+
+const funcionarioSearches: SearchConfig[] = [
+  {
+    label: "Nome",
+    placeholder: "nome",
+    path: (value) => `/api/funcionarios/nome/${value}`,
+  },
+];
+
+const oficinaSearches: SearchConfig[] = [
+  {
+    label: "Nome",
+    placeholder: "nome",
+    path: (value) => `/api/oficinas/nome/${value}`,
+  },
+];
+
+const marcaSearches: SearchConfig[] = [
+  {
+    label: "Nome",
+    placeholder: "nomeMarca",
+    path: (value) => `/api/marcas/nome/${value}`,
+  },
+];
+
+const servicoSearches: SearchConfig[] = [
+  {
+    label: "Nome",
+    placeholder: "nome",
+    path: (value) => `/api/servicos/nome/${value}`,
+  },
+];
+
+const veiculoSearches: SearchConfig[] = [
+  {
+    label: "Placa",
+    placeholder: "placa",
+    path: (value) => `/api/veiculos/placa/${value}`,
+  },
+  {
+    label: "Tipo",
+    placeholder: "tipo",
+    path: (value) => `/api/veiculos/tipo/${value}`,
+  },
+];
+
+const telefoneSearches: SearchConfig[] = [
+  {
+    label: "Nome",
+    placeholder: "nome",
+    path: (value) => `/api/telefones/nome/${value}`,
+  },
+];
+
+const pedidoActions: ActionConfig[] = [
+  {
+    label: "Meus servicos",
+    path: "/api/pedidos/me/servicos",
+  },
+  {
+    label: "Meus funcionarios",
+    path: "/api/pedidos/me/funcionarios",
+  },
+];
+
+export const entityConfigs: CrudConfig[] = [
+  {
+    key: "clientes",
+    label: "Cliente",
+    description: "CRUD de clientes e telefones.",
+    listPath: "/api/clientes",
+    getByIdPath: (id) => `/api/clientes/${id}`,
+    createPath: "/api/clientes",
+    updatePath: (id) => `/api/clientes/${id}`,
+    deletePath: (id) => `/api/clientes/${id}`,
+    searches: clienteSearches,
+    template: {
+      Id: 0,
+      Nome: "",
+      Email: "",
+      senha: "",
+      Cpf_Cnpj: "",
+      Obs: "",
+      razao: "",
+      DataNasc: "2026-01-01",
+      Numero: 0,
+      Rua: "",
+      Cidade: "",
+      Cep: "",
+      Bairro: "",
+      Estado: "",
+      Pais: "",
+      Complemento: "",
+      Sexo: 1,
+      TipoCliente: 1,
+      Situacao: 1,
+      Telefones: [telefoneTemplate],
+    },
+    listFields: clienteListFields,
+  },
+  {
+    key: "oficinas",
+    label: "Oficina",
+    listPath: "/api/oficinas",
+    getByIdPath: (id) => `/api/oficinas/${id}`,
+    createPath: "/api/oficinas",
+    updatePath: (id) => `/api/oficinas/${id}`,
+    deletePath: (id) => `/api/oficinas/${id}`,
+    searches: oficinaSearches,
+    template: {
+      Id: 0,
+      Nome: "",
+      CNPJ: "",
+      Email: "",
+      Numero: 0,
+      Rua: "",
+      Cidade: "",
+      Cep: 0,
+      Bairro: "",
+      Estado: "",
+      Pais: "",
+      Complemento: "",
+      Senha: "",
+      Situacao: 1,
+    },
+  },
+  {
+    key: "funcionarios",
+    label: "Funcionario",
+    listPath: "/api/funcionarios",
+    getByIdPath: (id) => `/api/funcionarios/${id}`,
+    createPath: "/api/funcionarios",
+    updatePath: (id) => `/api/funcionarios/${id}`,
+    deletePath: (id) => `/api/funcionarios/${id}`,
+    searches: funcionarioSearches,
+    template: {
+      Id: 0,
+      Nome: "",
+      Cpf: "",
+      Cargo: "",
+      Senha: "",
+      Email: "",
+      Situacao: 1,
+    },
+  },
+  {
+    key: "marcas",
+    label: "Marca",
+    listPath: "/api/marcas",
+    getByIdPath: (id) => `/api/marcas/${id}`,
+    createPath: "/api/marcas",
+    updatePath: (id) => `/api/marcas/${id}`,
+    deletePath: (id) => `/api/marcas/${id}`,
+    searches: marcaSearches,
+    template: {
+      Id: 0,
+      Nome: "",
+      Desc: "",
+      TipoMarca: "",
+    },
+  },
+  {
+    key: "servicos",
+    label: "Servico",
+    listPath: "/api/servicos",
+    getByIdPath: (id) => `/api/servicos/${id}`,
+    createPath: "/api/servicos",
+    updatePath: (id) => `/api/servicos/${id}`,
+    deletePath: (id) => `/api/servicos/${id}`,
+    searches: servicoSearches,
+    template: {
+      Id: 0,
+      Nome: "",
+      Descricao: "",
+      Valor: 0,
+      Garantia: "2026-01-01",
+      Funcionario_Servicos: [funcionarioServicoTemplate],
+    },
+    listFields: servicoListFields,
+  },
+  {
+    key: "pecas",
+    label: "Peca",
+    listPath: "/api/pecas",
+    getByIdPath: (id) => `/api/pecas/${id}`,
+    createPath: "/api/pecas",
+    updatePath: (id) => `/api/pecas/${id}`,
+    deletePath: (id) => `/api/pecas/${id}`,
+    template: {
+      Id: 0,
+      Nome: "",
+      Tipo: "",
+      Descricao: "",
+      Valor: 0,
+      Quantidade: 0,
+      Garantia: "2026-01-01",
+      Unidade: 0,
+      IdMarca: 0,
+      DataAquisicao: "2026-01-01",
+      Fornecedor: "",
+    },
+  },
+  {
+    key: "pedidos",
+    label: "Pedido",
+    listPath: "/api/pedidos",
+    getByIdPath: (id) => `/api/pedidos/${id}`,
+    createPath: "/api/pedidos",
+    updatePath: (id) => `/api/pedidos/${id}`,
+    deletePath: (id) => `/api/pedidos/${id}`,
+    actions: pedidoActions,
+    template: {
+      Id: 0,
+      idCliente: 0,
+      idFuncionario: 0,
+      idOficina: 0,
+      idVeiculo: 0,
+      ValorTotal: 0,
+      DescontoReais: 0,
+      DescontoPorcentagem: 0,
+      DescontoTotalReais: 0,
+      DescontoServicoPorcentagem: 0,
+      DescontoServicoReais: 0,
+      DescontoPecaPorcentagem: 0,
+      descontoPecaReais: 0,
+      Observacao: "",
+      DataInicio: "2026-01-01",
+      DataFim: "2026-01-02",
+      Pedido_Pecas: [pedidoPecaTemplate],
+      Pedido_Servicos: [pedidoServicoTemplate],
+    },
+    listFields: pedidoListFields,
+  },
+  {
+    key: "telefones",
+    label: "Telefone",
+    getByIdPath: (id) => `/api/telefones/${id}`,
+    createPath: "/api/telefones",
+    updatePath: (id) => `/api/telefones/${id}`,
+    deletePath: (id) => `/api/telefones/${id}`,
+    searches: telefoneSearches,
+    template: telefoneTemplate,
+  },
+  {
+    key: "veiculos",
+    label: "Veiculo",
+    listPath: "/api/veiculos",
+    createPath: "/api/veiculos",
+    updatePath: (id) => `/api/veiculos/${id}`,
+    deletePath: (id) => `/api/veiculos/${id}`,
+    searches: veiculoSearches,
+    template: {
+      Id: 0,
+      NomeVeiculo: "",
+      TipoVeiculo: "",
+      PlacaVeiculo: "",
+      ChassiVeiculo: "",
+      AnoFab: 2020,
+      Quilometragem: 0,
+      Combustivel: "",
+      Seguro: "",
+      Cor: "",
+      ClienteId: 0,
+      Situacao: 1,
+    },
+  },
+];

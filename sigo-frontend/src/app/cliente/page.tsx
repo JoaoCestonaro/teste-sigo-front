@@ -104,7 +104,7 @@ export default function ClientePage() {
       if (!isMounted) return;
 
       if (!vehiclesResult.ok) {
-        setError("Nao foi possivel carregar seus veiculos.");
+        setError("Não foi possível carregar seus veículos.");
         setVehicles([]);
         setOrders([]);
         setIsLoading(false);
@@ -137,12 +137,12 @@ export default function ClientePage() {
         <NavBar />
         <main className="mx-auto grid w-full max-w-md gap-5 px-4 py-5 sm:max-w-2xl">
           <section className="rounded-2xl bg-[linear-gradient(135deg,var(--sigo-blue-deep),var(--sigo-blue))] p-5 text-white shadow-[var(--sigo-shadow-md)]">
-            <p className="text-sm font-bold text-blue-100">Area do cliente</p>
+            <p className="text-sm font-bold text-blue-100">Área do cliente</p>
             <h1 className="mt-2 text-2xl font-black text-white">
-              Ola, {fullName || userName || "cliente"}
+              Olá, {fullName || userName || "cliente"}
             </h1>
             <p className="mt-2 text-sm leading-6 text-blue-50">
-              Acompanhe seus veiculos e os pedidos vinculados a cada um.
+              Acompanhe seus veículos e seus históricos.
             </p>
           </section>
 
@@ -173,7 +173,7 @@ export default function ClientePage() {
           <section className="grid gap-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-black text-[var(--sigo-text)]">
-                Meus veiculos
+                Meus veículos
               </h2>
               <span className="sigo-badge">{vehicles.length}</span>
             </div>
@@ -184,7 +184,7 @@ export default function ClientePage() {
               </div>
             ) : vehicles.length === 0 ? (
               <div className="sigo-card p-5 text-sm font-semibold text-[var(--sigo-muted)]">
-                Nenhum veiculo encontrado.
+                Nenhum veículo encontrado.
               </div>
             ) : (
               <div className="grid gap-3">
@@ -222,7 +222,7 @@ export default function ClientePage() {
                             : "border-[var(--sigo-border)] bg-[var(--sigo-surface-soft)] text-[var(--sigo-blue-deep)]"
                         }`}
                       >
-                        Ver historico
+                        Ver histórico
                       </span>
                     </button>
                   );
@@ -234,7 +234,7 @@ export default function ClientePage() {
           <section className="grid gap-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-black text-[var(--sigo-text)]">
-                Historico do veiculo
+                Histórico
               </h2>
               <span className="sigo-badge">{selectedOrders.length}</span>
             </div>
@@ -247,7 +247,7 @@ export default function ClientePage() {
 
             {selectedOrders.length === 0 ? (
               <div className="sigo-card p-5 text-sm font-semibold text-[var(--sigo-muted)]">
-                Nenhuma alteracao registrada para este veiculo.
+                Nenhuma alteração registrada para este veículo.
               </div>
             ) : (
               <div className="grid gap-3">
@@ -269,10 +269,10 @@ export default function ClientePage() {
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-sm font-black text-[var(--sigo-text)]">
-                                Alteracao #{id}
+                                Alteração #{id}
                               </p>
                               <p className="mt-1 text-xs font-semibold text-[var(--sigo-muted)]">
-                                {formatDate(start)} ate {formatDate(end)}
+                                {formatDate(start)} até {formatDate(end)}
                               </p>
                             </div>
                             <span className="text-sm font-black text-[var(--sigo-blue)]">
@@ -280,7 +280,7 @@ export default function ClientePage() {
                             </span>
                           </div>
                           <p className="mt-3 text-sm leading-6 text-[var(--sigo-muted)]">
-                            {String(note || "Servico registrado pela oficina.")}
+                            {String(note || "Serviço registrado pela oficina.")}
                           </p>
                         </div>
                       </div>
@@ -306,7 +306,7 @@ export default function ClientePage() {
                     <path d="M7 10l5 5 5-5" />
                     <path d="M12 15V3" />
                   </svg>
-                  Baixar relatorio
+                  Baixar relatório
                 </button>
               </div>
             )}

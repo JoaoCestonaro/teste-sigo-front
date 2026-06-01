@@ -174,7 +174,7 @@ export default function DashboardPage() {
           </div>
           <div className="sigo-card p-5">
             <p className="text-sm font-bold text-[var(--sigo-muted)]">
-              Veiculos
+              Veículos
             </p>
             <p className="mt-3 text-3xl font-black text-[var(--sigo-blue-deep)]">
               {isLoading ? "..." : veiculos}

@@ -275,7 +275,7 @@ export default function CadastroClientePage() {
                 Cliente
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-blue-50">
-                Crie o acesso do cliente com documento, endereco e telefones.
+                Crie o acesso do cliente com documento, endereço e telefones.
               </p>
             </div>
           </div>
@@ -284,7 +284,7 @@ export default function CadastroClientePage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <SectionCard
             title="Dados do cliente"
-            description="Organize informacoes pessoais, endereco e contatos antes de salvar."
+            description="Organize informações pessoais, endereço e contatos antes de salvar."
           >
             <form className="grid gap-6" onSubmit={handleSubmit}>
               <div className="grid gap-4 md:grid-cols-2">

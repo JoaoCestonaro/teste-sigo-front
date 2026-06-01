@@ -76,6 +76,9 @@ const hiddenFieldByEntity: Record<string, string[]> = {
 const shouldHideFieldForEntity = (entityKey: string, key: string): boolean =>
   (hiddenFieldByEntity[entityKey] ?? []).includes(normalizeFieldKey(key));
 
+const shouldCreateWithArrays = (entityKey: string): boolean =>
+  entityKey === "servicos";
+
 const fieldLabels: Record<string, string> = {
   id: "ID",
   nome: "Nome",
@@ -231,10 +234,9 @@ const buildPayload = (
         : null;
       if (
         parentField &&
-        normalizeFieldKey(key) === normalizeFieldKey(parentField) &&
-        options.parentId
+        normalizeFieldKey(key) === normalizeFieldKey(parentField)
       ) {
-        result[key] = options.parentId;
+        if (options.parentId) result[key] = options.parentId;
         return;
       }
 
@@ -654,14 +656,41 @@ export default function GerenciaPage() {
     setShowForm(true);
   };
 
-  const handleEdit = (item: FormValue) => {
+  const handleEdit = async (item: FormValue) => {
     if (!selectedConfig) return;
     const id = getItemId(item);
     if (!id) return;
+    let itemToEdit = item;
+
+    if (selectedConfig.getByIdPath) {
+      setIsLoading(true);
+      setError(null);
+      const result = await fetchJson(
+        baseUrl,
+        selectedConfig.getByIdPath(String(id)),
+        {
+          method: "GET",
+          headers: authHeaders,
+        }
+      );
+
+      if (result.ok) {
+        const list = extractList(result.data);
+        const fullRecord =
+          isPlainObject(result.data) && !Array.isArray(result.data)
+            ? ((result.data.Data ?? result.data.data ?? result.data) as unknown)
+            : list[0];
+        if (isPlainObject(fullRecord)) {
+          itemToEdit = fullRecord;
+        }
+      }
+      setIsLoading(false);
+    }
+
     setFormMode("edit");
     setEditingId(id);
     setFormData(
-      applyLoggedOficina(mergeWithTemplate(selectedConfig.template, item) as FormValue)
+      applyLoggedOficina(mergeWithTemplate(selectedConfig.template, itemToEdit) as FormValue)
     );
     setShowForm(true);
   };
@@ -674,7 +703,7 @@ export default function GerenciaPage() {
       method: "POST",
       headers: authHeaders,
       body: buildPayload(selectedConfig.template, formData, "", {
-        includeArrays: false,
+        includeArrays: shouldCreateWithArrays(selectedConfig.key),
         entityKey: selectedConfig.key,
         formMode: "create",
       }),
@@ -1320,7 +1349,7 @@ export default function GerenciaPage() {
                   {isLoading
                     ? "Salvando..."
                     : formMode === "edit"
-                      ? "Salvar alteracoes"
+                      ? "Salvar alterações"
                       : "Criar registro"}
                 </button>
               </div>

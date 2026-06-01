@@ -14,7 +14,7 @@ export function ConnectionSettings({
   return (
     <details className="sigo-card-soft group overflow-hidden">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-[var(--sigo-blue-deep)]">
-        <span>Configuracao avancada</span>
+        <span>Configuração avançada</span>
         <span className="text-xs font-semibold text-[var(--sigo-muted)] group-open:hidden">
           Mostrar
         </span>

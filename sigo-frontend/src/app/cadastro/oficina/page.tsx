@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,7 @@ import { ConnectionSettings } from "@/components/Form/ConnectionSettings";
 import { routes } from "@/navigation/routes";
 import { PublicOnlyRoute } from "@/components/Auth/RouteGuards";
 import { formatCep, formatCnpj, onlyDigits, stateOptions } from "@/lib/fieldMetadata";
+import { fetchCepAddress } from "@/lib/cep";
 
 type OficinaForm = {
   Nome: string;
@@ -123,6 +124,7 @@ export default function CadastroOficinaPage() {
   const [formData, setFormData] = useState<OficinaForm>(buildDefaultForm);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastCepLookup, setLastCepLookup] = useState("");
 
   const updateField = (key: keyof OficinaForm, value: string) => {
     const maskedValue =
@@ -137,6 +139,31 @@ export default function CadastroOficinaPage() {
       [key]: Number.isNaN(parsed) ? 0 : parsed,
     }));
   };
+
+  useEffect(() => {
+    const cepDigits = onlyDigits(formData.Cep);
+    if (cepDigits.length !== 8 || cepDigits === lastCepLookup) return;
+
+    let isMounted = true;
+    setLastCepLookup(cepDigits);
+
+    fetchCepAddress(baseUrl, cepDigits).then((address) => {
+      if (!isMounted || !address) return;
+      setFormData((prev) => ({
+        ...prev,
+        Rua: address.rua || prev.Rua,
+        Bairro: address.bairro || prev.Bairro,
+        Cidade: address.cidade || prev.Cidade,
+        Estado: address.estado || prev.Estado,
+        Complemento: address.complemento || prev.Complemento,
+        Pais: address.pais || prev.Pais,
+      }));
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [baseUrl, formData.Cep, lastCepLookup]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

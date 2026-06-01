@@ -113,6 +113,17 @@ const getOficinaIdFromToken = (token: string): number | null => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
+const getRoleFromToken = (token: string): string => {
+  const payload = decodeJwtPayload(token);
+  return getStringClaim(payload, [
+    "role",
+    "Role",
+    "roles",
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role",
+  ]);
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [baseUrl, setBaseUrlState] = useState(defaultBaseUrl);
   const [token, setToken] = useState("");
@@ -196,6 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => setToken("");
   const userName = useMemo(() => getFirstNameFromToken(token), [token]);
   const fullName = useMemo(() => getFullNameFromToken(token), [token]);
+  const userRole = useMemo(() => getRoleFromToken(token), [token]);
   const oficinaId = useMemo(() => getOficinaIdFromToken(token), [token]);
 
   const value = useMemo<AuthContextValue>(
@@ -206,12 +218,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken,
       userName,
       fullName,
+      userRole,
       oficinaId,
       login,
       logout,
       isReady,
     }),
-    [baseUrl, token, userName, fullName, oficinaId, isReady]
+    [baseUrl, token, userName, fullName, userRole, oficinaId, isReady]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

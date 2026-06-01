@@ -29,12 +29,16 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { token, isReady } = useAuth();
+  const { token, userRole, isReady } = useAuth();
 
   useEffect(() => {
     if (!isReady) return;
-    if (token) router.replace(routes.dashboard);
-  }, [isReady, router, token]);
+    if (token) {
+      router.replace(
+        userRole.toLowerCase() === "cliente" ? routes.clientHome : routes.dashboard
+      );
+    }
+  }, [isReady, router, token, userRole]);
 
   if (!isReady || token) return <RouteLoading />;
 

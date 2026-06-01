@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchJson } from "@/lib/api";
 import { entityConfigs } from "@/models/entityConfigs";
@@ -41,7 +42,8 @@ const extractList = (data: unknown): unknown[] => {
 };
 
 export default function DashboardPage() {
-  const { baseUrl, token } = useAuth();
+  const router = useRouter();
+  const { baseUrl, token, userRole } = useAuth();
   const configs = useMemo(
     () => entityConfigs.filter((config) => dashboardKeys.includes(config.key)),
     []
@@ -55,6 +57,12 @@ export default function DashboardPage() {
     }))
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (userRole.toLowerCase() === "cliente") {
+      router.replace(routes.clientHome);
+    }
+  }, [router, userRole]);
 
   useEffect(() => {
     let isMounted = true;
@@ -123,10 +131,13 @@ export default function DashboardPage() {
         <DashboardTabs />
 
         <section className="sigo-card overflow-hidden">
-          <div className="grid gap-6 bg-[var(--sigo-blue-deep)] p-6 text-white lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="grid gap-6 bg-[linear-gradient(135deg,var(--sigo-blue-deep),var(--sigo-blue))] p-6 text-white lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-blue-100">
+              Visão Geral
+              </p>
               <h1 className="mt-3 text-3xl font-black text-white lg:text-4xl">
-                Visão geral
+                Bem-Vindo
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50">
                 Acompanhe os princípais números do sistema e acesse a área de

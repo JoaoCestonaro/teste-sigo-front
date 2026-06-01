@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +16,7 @@ import {
   onlyDigits,
   stateOptions,
 } from "@/lib/fieldMetadata";
+import { fetchCepAddress } from "@/lib/cep";
 
 type CadastroForm = {
   Nome: string;
@@ -141,6 +142,7 @@ export default function CadastroPage() {
   const [formData, setFormData] = useState<CadastroForm>(buildDefaultForm);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastCepLookup, setLastCepLookup] = useState("");
 
   const isCnpj = useMemo(
     () => isCnpjDocument(formData.Documento),
@@ -164,6 +166,31 @@ export default function CadastroPage() {
       [key]: Number.isNaN(parsed) ? 0 : parsed,
     }));
   };
+
+  useEffect(() => {
+    const cepDigits = onlyDigits(formData.Cep);
+    if (cepDigits.length !== 8 || cepDigits === lastCepLookup) return;
+
+    let isMounted = true;
+    setLastCepLookup(cepDigits);
+
+    fetchCepAddress(baseUrl, cepDigits).then((address) => {
+      if (!isMounted || !address) return;
+      setFormData((prev) => ({
+        ...prev,
+        Rua: address.rua || prev.Rua,
+        Bairro: address.bairro || prev.Bairro,
+        Cidade: address.cidade || prev.Cidade,
+        Estado: address.estado || prev.Estado,
+        Complemento: address.complemento || prev.Complemento,
+        Pais: address.pais || prev.Pais,
+      }));
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [baseUrl, formData.Cep, lastCepLookup]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

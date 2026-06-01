@@ -22,7 +22,7 @@ const extractLoginError = (data: unknown): string | null => {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, userRole } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,9 @@ export default function LoginPage() {
 
     const result = await login({ email, password });
     if (result.ok) {
-      router.replace(routes.dashboard);
+      router.replace(
+        userRole.toLowerCase() === "cliente" ? routes.clientHome : routes.dashboard
+      );
     } else {
       setError(extractLoginError(result.data) ?? "Nao foi possivel entrar.");
     }

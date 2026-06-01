@@ -33,7 +33,7 @@ export function NavBar() {
           {token ? (
             <>
               <span className="text-sm font-bold text-blue-50">
-                {`Ola, ${userName || "usuario"}`}
+                {`Olá, ${userName || "usuario"}`}
               </span>
               <button
                 type="button"

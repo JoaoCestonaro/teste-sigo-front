@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +18,7 @@ import {
   onlyDigits,
   stateOptions,
 } from "@/lib/fieldMetadata";
+import { fetchCepAddress } from "@/lib/cep";
 
 type TelefoneForm = {
   Numero: string;
@@ -146,6 +147,7 @@ export default function CadastroClientePage() {
   const [formData, setFormData] = useState<ClienteForm>(buildDefaultForm);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastCepLookup, setLastCepLookup] = useState("");
 
   const updateField = (key: keyof ClienteForm, value: string) => {
     const maskedValue =
@@ -195,6 +197,31 @@ export default function CadastroClientePage() {
       Telefones: prev.Telefones.filter((_, idx) => idx !== index),
     }));
   };
+
+  useEffect(() => {
+    const cepDigits = onlyDigits(formData.Cep);
+    if (cepDigits.length !== 8 || cepDigits === lastCepLookup) return;
+
+    let isMounted = true;
+    setLastCepLookup(cepDigits);
+
+    fetchCepAddress(baseUrl, cepDigits).then((address) => {
+      if (!isMounted || !address) return;
+      setFormData((prev) => ({
+        ...prev,
+        Rua: address.rua || prev.Rua,
+        Bairro: address.bairro || prev.Bairro,
+        Cidade: address.cidade || prev.Cidade,
+        Estado: address.estado || prev.Estado,
+        Complemento: address.complemento || prev.Complemento,
+        Pais: address.pais || prev.Pais,
+      }));
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [baseUrl, formData.Cep, lastCepLookup]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

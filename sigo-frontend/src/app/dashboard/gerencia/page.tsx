@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchJson } from "@/lib/api";
+import { fetchCepAddress } from "@/lib/cep";
 import type { CrudConfig } from "@/components/CrudPanel";
 import { entityConfigs } from "@/models/entityConfigs";
 import { DashboardTabs } from "@/components/Dashboard/DashboardTabs";
@@ -60,6 +61,13 @@ const parentIdFieldByList: Record<string, string> = {
   pedidoservicos: "IdPedido",
 };
 
+const partConditionOptions: SelectOption[] = [
+  { value: "Nova", label: "Nova" },
+  { value: "Usada", label: "Usada" },
+  { value: "Recondicionada", label: "Recondicionada" },
+  { value: "Danificada", label: "Danificada" },
+];
+
 const hiddenFieldByEntity: Record<string, string[]> = {
   clientes: ["senha"],
   funcionarios: ["senha"],
@@ -76,64 +84,64 @@ const fieldLabels: Record<string, string> = {
   cpf: "CPF",
   cnpj: "CNPJ",
   cpfcnpj: "CPF/CNPJ",
-  obs: "Observacao",
-  razao: "Razao social",
+  obs: "Observação",
+  razao: "Razão social",
   datanasc: "Data de nascimento",
-  numero: "Numero",
+  numero: "Número",
   rua: "Rua",
   cidade: "Cidade",
   cep: "CEP",
   bairro: "Bairro",
   estado: "Estado",
-  pais: "Pais",
+  pais: "País",
   complemento: "Complemento",
   sexo: "Sexo",
   tipocliente: "Tipo de cliente",
-  situacao: "Situacao",
+  situacao: "Situação",
   telefones: "Telefones",
   ddd: "DDD",
-  desc: "Descricao curta",
-  descricao: "Descricao",
+  desc: "Descrição curta",
+  descricao: "Descrição",
   tipomarca: "Tipo de marca",
   valor: "Valor",
   garantia: "Garantia",
-  funcionarioservicos: "Funcionarios do servico",
-  idfuncionario: "Funcionario",
-  idservico: "Servico",
+  funcionarioservicos: "Funcionários do serviço",
+  idfuncionario: "Funcionário",
+  idservico: "Serviço",
   tempodec: "Tempo decimal",
   tipo: "Tipo",
   quantidade: "Quantidade",
   unidade: "Unidade",
   idmarca: "Marca",
-  dataaquisicao: "Data de aquisicao",
+  dataaquisicao: "Data de aquisição",
   fornecedor: "Fornecedor",
   idcliente: "Cliente",
   idoficina: "Oficina",
-  idveiculo: "Veiculo",
+  idveiculo: "Veículo",
   valortotal: "Valor total",
   descontoreais: "Desconto em reais",
   descontoporcentagem: "Desconto em porcentagem",
   descontototalreais: "Desconto total em reais",
-  descontoservicoporcentagem: "Desconto do servico em porcentagem",
-  descontoservicoreais: "Desconto do servico em reais",
-  descontopecaporcentagem: "Desconto da peca em porcentagem",
-  descontopecareais: "Desconto da peca em reais",
-  observacao: "Observacao",
-  datainicio: "Data de inicio",
+  descontoservicoporcentagem: "Desconto do serviço em porcentagem",
+  descontoservicoreais: "Desconto do serviço em reais",
+  descontopecaporcentagem: "Desconto da peça em porcentagem",
+  descontopecareais: "Desconto da peça em reais",
+  observacao: "Observação",
+  datainicio: "Data de início",
   datafim: "Data de fim",
-  pedidopecas: "Pecas do pedido",
-  pedidoservicos: "Servicos do pedido",
+  pedidopecas: "Peças do pedido",
+  pedidoservicos: "Serviços do pedido",
   idpedido: "Pedido",
-  idpeca: "Peca",
+  idpeca: "Peça",
   quantvezes: "Quantidade de vezes",
-  datainstalacao: "Data de instalacao",
-  nomeveiculo: "Nome do veiculo",
-  tipoveiculo: "Tipo do veiculo",
+  datainstalacao: "Data de instalação",
+  nomeveiculo: "Nome do veículo",
+  tipoveiculo: "Tipo do veículo",
   placaveiculo: "Placa",
   chassisveiculo: "Chassi",
-  anofab: "Ano de fabricacao",
+  anofab: "Ano de fabricação",
   quilometragem: "Quilometragem",
-  combustivel: "Combustivel",
+  combustivel: "Combustível",
   seguro: "Seguro",
   cor: "Cor",
   clienteid: "Cliente",
@@ -366,7 +374,17 @@ const getInputType = (key: string, templateValue: unknown): string => {
   return "text";
 };
 
-const getFieldOptions = (key: string): SelectOption[] | null => {
+const getFieldOptions = (
+  key: string,
+  path: Array<string | number> = []
+): SelectOption[] | null => {
+  const isPartOrderState = path.some(
+    (part) =>
+      typeof part === "string" && normalizeFieldKey(part) === "pedidopecas"
+  );
+  if (isPartOrderState && normalizeFieldKey(key) === "estado") {
+    return partConditionOptions;
+  }
   if (isStateField(key)) return stateOptions;
   return getEnumOptions(key);
 };
@@ -512,6 +530,7 @@ export default function GerenciaPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [lastCepLookup, setLastCepLookup] = useState("");
   const [formData, setFormData] = useState<FormValue>(() =>
     cloneTemplate((entities[0] ?? entityConfigs[0]).template)
   );
@@ -793,6 +812,34 @@ export default function GerenciaPage() {
     }
 
     setFormData((prev) => setAtPath(prev, path, nextValue) as FormValue);
+
+    if (normalized === "cep") {
+      const cepDigits = String(value).replace(/\D/g, "");
+      const lookupKey = `${selectedConfig.key}:${path.join(".")}:${cepDigits}`;
+      if (cepDigits.length === 8 && lookupKey !== lastCepLookup) {
+        setLastCepLookup(lookupKey);
+        const parentPath = path.slice(0, -1);
+        fetchCepAddress(baseUrl, cepDigits, authHeaders).then((address) => {
+          if (!address) return;
+          setFormData((prev) => {
+            let next: unknown = prev;
+            const applySibling = (field: string, fieldValue?: string) => {
+              if (!fieldValue) return;
+              next = setAtPath(next, [...parentPath, field], fieldValue);
+            };
+
+            applySibling("Rua", address.rua);
+            applySibling("Bairro", address.bairro);
+            applySibling("Cidade", address.cidade);
+            applySibling("Estado", address.estado);
+            applySibling("Complemento", address.complemento);
+            applySibling("Pais", address.pais);
+
+            return next as FormValue;
+          });
+        });
+      }
+    }
   };
 
   const renderFields = (
@@ -915,7 +962,7 @@ export default function GerenciaPage() {
         normalizeFieldKey(key).includes("cnpj")
           ? maskFieldValue(key, normalizedValue)
           : String(normalizedValue);
-      const fieldOptions = getFieldOptions(key);
+      const fieldOptions = getFieldOptions(key, path);
       const relationEntityKey = getRelationEntityKey(key);
       const isLoggedOficinaField =
         selectedConfig.key === "pedidos" && normalizeFieldKey(key) === "idoficina";
@@ -1040,7 +1087,7 @@ export default function GerenciaPage() {
             <p className="text-xs font-black uppercase tracking-[0.14em] text-blue-100">
               Gerencia
             </p>
-            <h1 className="mt-2 text-2xl font-black text-white">
+            <h1 className="mt-3 text-3xl font-black text-white lg:text-4xl">
               Cadastros e registros
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50">
@@ -1134,7 +1181,7 @@ export default function GerenciaPage() {
                         {displayKeys.map((key) => (
                           <th key={key}>{formatFieldLabel(key)}</th>
                         ))}
-                        <th>Acoes</th>
+                        <th>Ações</th>
                       </tr>
                     </thead>
                     <tbody>

@@ -1,7 +1,7 @@
 import { authStorage } from "@/lib/auth-storage";
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5044";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://localhost:7241";
 
 export interface ResponseEnvelope<T> {
   code?: string | number;

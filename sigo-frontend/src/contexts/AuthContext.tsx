@@ -7,14 +7,110 @@ import { authStorage } from "@/lib/auth-storage";
 import type { AuthContextValue, AuthLoginPayload } from "@/models/auth";
 
 const defaultBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5044";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://localhost:7241";
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
-const loginRoutes: Record<AuthLoginPayload["role"], string> = {
-  Cliente: "/api/clientes/login",
-  Funcionario: "/api/funcionarios/login",
-  Oficina: "/api/oficinas/login",
+const loginRoutes = [
+  "/api/clientes/login",
+  "/api/oficinas/login",
+  "/api/funcionarios/login",
+];
+
+const sanitizeToken = (value: string): string =>
+  value.trim().replace(/^Bearer\s+/i, "").replace(/^"|"$/g, "");
+
+const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
+  const [, payload] = sanitizeToken(token).split(".");
+  if (!payload || typeof window === "undefined") return null;
+
+  try {
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "="
+    );
+    const binary = window.atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const json = new TextDecoder().decode(bytes);
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+const getStringClaim = (
+  payload: Record<string, unknown> | null,
+  names: string[]
+): string => {
+  if (!payload) return "";
+
+  for (const name of names) {
+    const value = payload[name];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (Array.isArray(value)) {
+      const first = value.find((item) => typeof item === "string" && item.trim());
+      if (typeof first === "string") return first.trim();
+    }
+  }
+
+  const fallback = Object.entries(payload).find(([key, value]) => {
+    const normalizedKey = key.toLowerCase();
+    return (
+      typeof value === "string" &&
+      value.trim() &&
+      !normalizedKey.includes("nameidentifier") &&
+      !normalizedKey.endsWith("/nameidentifier") &&
+      (normalizedKey === "name" ||
+        normalizedKey === "unique_name" ||
+        normalizedKey === "given_name" ||
+        normalizedKey.endsWith("/name"))
+    );
+  });
+
+  return typeof fallback?.[1] === "string" ? fallback[1].trim() : "";
+};
+
+const getFirstNameFromToken = (token: string): string => {
+  const fullName = getFullNameFromToken(token);
+  if (!fullName) return "";
+
+  const nameOrEmail = fullName.trim();
+  const beforeEmailDomain = nameOrEmail.split("@")[0];
+  return beforeEmailDomain.split(/\s+/)[0] ?? "";
+};
+
+const getFullNameFromToken = (token: string): string => {
+  const payload = decodeJwtPayload(token);
+  const fullName =
+    getStringClaim(payload, [
+      "name",
+      "unique_name",
+      "given_name",
+      "Nome",
+      "nome",
+      "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+      "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+    ]) ||
+    getStringClaim(payload, [
+      "email",
+      "Email",
+      "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+    ]);
+
+  if (!fullName) return "";
+  return fullName;
+};
+
+const getOficinaIdFromToken = (token: string): number | null => {
+  const payload = decodeJwtPayload(token);
+  const rawValue =
+    payload?.oficina_id ??
+    payload?.OficinaId ??
+    payload?.oficinaId;
+
+  const parsed = Number(rawValue);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -47,44 +143,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (payload: AuthLoginPayload): Promise<ApiResult> => {
     const normalizedEmail = payload.email.trim().toLowerCase();
-    const result = await fetchJson(baseUrl, loginRoutes[payload.role], {
-      method: "POST",
-      body: {
-        email: normalizedEmail,
-        password: payload.password,
-      },
-    });
+    let lastResult: ApiResult | null = null;
 
-    if (result.ok && typeof result.data === "object" && result.data) {
-      const pickToken = (value: unknown): string | null => {
-        if (!value || typeof value !== "object") return null;
-        const record = value as { token?: string; Token?: string };
-        return record.token ?? record.Token ?? null;
-      };
-      const envelope = result.data as {
-        data?: { token?: string; Token?: string } | string | null;
-        Data?: { Token?: string; token?: string } | string | null;
-        token?: string;
-        Token?: string;
-      };
-      const tokenValue =
-        (typeof envelope.data === "string" ? envelope.data : null) ??
-        (typeof envelope.Data === "string" ? envelope.Data : null) ??
-        pickToken(envelope.data) ??
-        pickToken(envelope.Data) ??
-        envelope.token ??
-        envelope.Token ??
-        "";
-      if (tokenValue) setToken(tokenValue);
-    } else if (result.ok && typeof result.data === "string") {
-      const tokenValue = result.data.trim();
-      if (tokenValue) setToken(tokenValue);
+    for (const route of loginRoutes) {
+      const result = await fetchJson(baseUrl, route, {
+        method: "POST",
+        body: {
+          email: normalizedEmail,
+          password: payload.password,
+        },
+      });
+      lastResult = result;
+
+      if (result.ok && typeof result.data === "object" && result.data) {
+        const pickToken = (value: unknown): string | null => {
+          if (!value || typeof value !== "object") return null;
+          const record = value as { token?: string; Token?: string };
+          return record.token ?? record.Token ?? null;
+        };
+        const envelope = result.data as {
+          data?: { token?: string; Token?: string } | string | null;
+          Data?: { Token?: string; token?: string } | string | null;
+          token?: string;
+          Token?: string;
+        };
+        const tokenValue =
+          (typeof envelope.data === "string" ? envelope.data : null) ??
+          (typeof envelope.Data === "string" ? envelope.Data : null) ??
+          pickToken(envelope.data) ??
+          pickToken(envelope.Data) ??
+          envelope.token ??
+          envelope.Token ??
+          "";
+        if (tokenValue) setToken(sanitizeToken(tokenValue));
+        return result;
+      }
+
+      if (result.ok && typeof result.data === "string") {
+        const tokenValue = sanitizeToken(result.data);
+        if (tokenValue) setToken(tokenValue);
+        return result;
+      }
     }
 
-    return result;
+    return lastResult ?? {
+      ok: false,
+      status: 500,
+      data: null,
+    };
   };
 
   const logout = () => setToken("");
+  const userName = useMemo(() => getFirstNameFromToken(token), [token]);
+  const fullName = useMemo(() => getFullNameFromToken(token), [token]);
+  const oficinaId = useMemo(() => getOficinaIdFromToken(token), [token]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -92,11 +204,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setBaseUrl,
       token,
       setToken,
+      userName,
+      fullName,
+      oficinaId,
       login,
       logout,
       isReady,
     }),
-    [baseUrl, token, isReady]
+    [baseUrl, token, userName, fullName, oficinaId, isReady]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

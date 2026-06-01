@@ -1,6 +1,5 @@
-import { GenericService } from "@/lib/generic";
-
-type Peca = Record<string, unknown>;
+import { GenericService } from "@/hooks/generic";
+import type Peca from "@/models/peca";
 
 export class PecaService extends GenericService<Peca> {
   constructor() {

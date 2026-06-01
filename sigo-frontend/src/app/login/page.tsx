@@ -1,18 +1,28 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { AuthRole } from "@/models/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { routes } from "@/navigation/routes";
-import { NavBar } from "@/components/NavBar";
-import { SectionCard } from "@/components/SectionCard";
-import { TextInput } from "@/components/TextInput";
+import { NavBar } from "@/components/Sidebar/NavBar";
+import { TextInput } from "@/components/Form/TextInput";
+import { PublicOnlyRoute } from "@/components/Auth/RouteGuards";
+
+const extractLoginError = (data: unknown): string | null => {
+  if (!data || typeof data !== "object") return null;
+  const record = data as {
+    message?: string;
+    Message?: string;
+    detail?: string;
+    title?: string;
+  };
+  return record.detail ?? record.message ?? record.Message ?? record.title ?? null;
+};
 
 export default function LoginPage() {
   const router = useRouter();
-  const { baseUrl, setBaseUrl, login } = useAuth();
-  const [role, setRole] = useState<AuthRole>("Cliente");
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -23,95 +33,116 @@ export default function LoginPage() {
     setError(null);
     setIsLoading(true);
 
-    const result = await login({ role, email, password });
+    const result = await login({ email, password });
     if (result.ok) {
       router.replace(routes.dashboard);
     } else {
-      const message =
-        typeof result.data === "object" && result.data
-          ? ((result.data as {
-              message?: string;
-              Message?: string;
-              detail?: string;
-              title?: string;
-            }).detail ??
-              (result.data as {
-                message?: string;
-                Message?: string;
-                detail?: string;
-                title?: string;
-              }).message ??
-              (result.data as {
-                message?: string;
-                Message?: string;
-                detail?: string;
-                title?: string;
-              }).Message ??
-              (result.data as {
-                message?: string;
-                Message?: string;
-                detail?: string;
-                title?: string;
-              }).title)
-          : null;
-      setError(message ?? "Login failed");
+      setError(extractLoginError(result.data) ?? "Nao foi possivel entrar.");
     }
 
     setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <PublicOnlyRoute>
+      <div className="sigo-page">
       <NavBar />
-      <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-10">
-        <header className="grid gap-2">
-          <h1 className="text-2xl font-semibold">SIGO Login</h1>
-          <p className="text-sm text-slate-600">
-            Enter your credentials to access the dashboard.
-          </p>
-        </header>
+      <main className="sigo-shell flex min-h-[calc(100vh-5rem)] items-center justify-center py-8 lg:py-12">
+        <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl lg:rounded-r-none border border-[var(--sigo-border)] bg-white shadow-[var(--sigo-shadow-lg)] lg:grid-cols-[1.2fr_1fr] lg:divide-x lg:divide-[var(--sigo-border)]">
+          <section className="hidden flex-col justify-between bg-[linear-gradient(to_bottom_right,rgba(8,47,99,0.95),rgba(7,95,189,0.85)),url('https://images.unsplash.com/photo-1615906655593-ad0386982a0f?auto=format&fit=crop&q=80')] bg-cover bg-center p-10 text-white lg:flex">
+            <div className="max-w-xl">
+              <div className="mb-6 flex h-32 w-32 items-center justify-center">
+                <img
+                  src="/sigo-logo.png"
+                  alt="Logo SIGO"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <p className="mt-4 text-lg font-bold text-white">
+                Oficina, clientes e serviços em um só paínel
+              </p>
+              <p className="mt-4 max-w-lg text-base leading-7 text-blue-50">
+                Acesse o ambiente administrativo para acompanhar cadastros,
+                pedidos, veículos, peças e serviços com clareza operacional.
+              </p>
+            </div>
 
-        <SectionCard title="Connection">
-          <TextInput
-            label="API base URL"
-            value={baseUrl}
-            onChange={setBaseUrl}
-            placeholder="http://localhost:5044"
-          />
-        </SectionCard>
+           
+          </section>
 
-        <SectionCard title="Login">
-          <form className="grid gap-3" onSubmit={handleSubmit}>
-            <label className="text-sm text-slate-600">
-              Role
-              <select
-                className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                value={role}
-                onChange={(event) => setRole(event.target.value as AuthRole)}
-              >
-                <option value="Cliente">Cliente</option>
-                <option value="Funcionario">Funcionario</option>
-                <option value="Oficina">Oficina</option>
-              </select>
-            </label>
-            <TextInput label="Email" value={email} onChange={setEmail} />
+          <section className="flex flex-col bg-white">
+            <div className="border-b border-[var(--sigo-border)] px-8 py-8">
+            <div className="mb-6 flex items-center gap-3 lg:hidden">
+              <span className="flex h-20 w-20 items-center justify-center">
+                <img
+                  src="/sigo-logo.png"
+                  alt="Logo SIGO"
+                  className="h-full w-full object-contain"
+                />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-[var(--sigo-muted)]">
+                  Sistema de gestão de oficinas
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm font-bold text-[var(--sigo-blue)]">
+              Acesso ao sistema
+            </p>
+            <h2 className="mt-2 text-3xl font-black text-[var(--sigo-text)]">
+              Entrar
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--sigo-muted)]">
+              Informe suas credenciais para entrar no SIGO.
+            </p>
+          </div>
+
+          <form className="grid gap-5 p-6" onSubmit={handleSubmit}>
             <TextInput
-              label="Password"
+              label="Email"
+              value={email}
+              onChange={setEmail}
+              type="email"
+            />
+            <TextInput
+              label="Senha"
               value={password}
               onChange={setPassword}
               type="password"
             />
-            {error ? <p className="text-xs text-rose-600">{error}</p> : null}
+
+            {error ? (
+              <div className="sigo-error px-4 py-3 text-sm font-semibold">
+                {error}
+              </div>
+            ) : null}
+
             <button
               type="submit"
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white"
+              className="sigo-button sigo-button-primary w-full"
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isLoading ? "Entrando..." : "Entrar"}
             </button>
-          </form>
-        </SectionCard>
+
+            <div className="flex flex-col gap-2 border-t border-[var(--sigo-border)] pt-5 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-[var(--sigo-muted)]">
+                Ainda não tem conta?
+              </span>
+              <Link
+                className="font-bold text-[var(--sigo-blue)] hover:text-[var(--sigo-blue-dark)]"
+                href={routes.register}
+              >
+                Criar Conta
+              </Link>
+            </div>
+
+            </form>
+          </section>
+        </div>
       </main>
-    </div>
+      </div>
+    </PublicOnlyRoute>
   );
 }

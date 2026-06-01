@@ -29,7 +29,12 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <footer className="border-t border-white/10 bg-[#041f45] px-4 py-4 text-center text-xs font-medium text-blue-100">
+            © 2026 SIGO. Todos os direitos reservados.
+          </footer>
+        </AuthProvider>
       </body>
     </html>
   );

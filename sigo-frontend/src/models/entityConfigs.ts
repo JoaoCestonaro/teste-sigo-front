@@ -3,7 +3,7 @@ import type {
   ListFieldConfig,
   SearchConfig,
   ActionConfig,
-} from "@/components/CrudPanel";
+} from "@/components/Table/CrudPanel";
 
 const telefoneTemplate = {
   Id: 0,

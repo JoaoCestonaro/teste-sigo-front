@@ -1,6 +1,5 @@
-import { GenericService } from "@/lib/generic";
-
-type Oficina = Record<string, unknown>;
+import { GenericService } from "@/hooks/generic";
+import type Oficina from "@/models/oficina";
 
 export class OficinaService extends GenericService<Oficina> {
   constructor() {

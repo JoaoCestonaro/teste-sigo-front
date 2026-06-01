@@ -1,6 +1,5 @@
-import { GenericService } from "@/lib/generic";
-
-type Funcionario = Record<string, unknown>;
+import { GenericService } from "@/hooks/generic";
+import type Funcionario from "@/models/funcionario";
 
 export class FuncionarioService extends GenericService<Funcionario> {
   constructor() {

@@ -1,7 +1,7 @@
 export const routes = {
   login: "/login",
   dashboard: "/dashboard",
-  employeeHome: "/dashboard/gerencia?entidade=clientes",
+  employeeHome: "/dashboard",
   clientHome: "/cliente",
   profile: "/perfil",
   management: "/dashboard/gerencia",

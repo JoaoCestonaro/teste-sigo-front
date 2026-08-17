@@ -1239,7 +1239,7 @@ function RelationSearchField({
 }
 
 export default function GerenciaPage() {
-  const { baseUrl, token, userRole, oficinaId } = useAuth();
+  const { baseUrl, token, userRole, userId, fullName, oficinaId } = useAuth();
   const entities = useMemo(
     () =>
       getAllowedManagementConfigs(
@@ -1753,6 +1753,22 @@ export default function GerenciaPage() {
     return setAtPath(data, [officeField], oficinaId) as FormValue;
   };
 
+  const applyLoggedFuncionarioToPedido = (data: FormValue): FormValue => {
+    if (
+      selectedConfig?.key !== "pedidos" ||
+      normalizeRole(userRole) !== "funcionario" ||
+      !userId
+    ) {
+      return data;
+    }
+
+    const employeeField = getRecordKey(data, "idFuncionario");
+    return setAtPath(data, [employeeField], userId) as FormValue;
+  };
+
+  const prepareCreateForm = (data: FormValue): FormValue =>
+    applyLoggedFuncionarioToPedido(applyLoggedOficina(data));
+
   const loadList = async (config: CrudConfig) => {
     if (!config.listPath) {
       setItems([]);
@@ -1886,7 +1902,7 @@ export default function GerenciaPage() {
     setManualTotalEnabled(false);
     setManualTotalValue(0);
     setFormData(
-      applyLoggedOficina(
+      prepareCreateForm(
         clearCreateSelectValues(
           createEmptyListForm(getCreateTemplate(selectedConfig)),
           selectedConfig.key
@@ -1900,7 +1916,7 @@ export default function GerenciaPage() {
     setSearchTerm("");
     setCurrentPage(1);
     loadList(selectedConfig);
-  }, [selectedConfig, baseUrl, token, oficinaId, userRole]);
+  }, [selectedConfig, baseUrl, token, oficinaId, userId, userRole]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -1958,7 +1974,7 @@ export default function GerenciaPage() {
     setManualTotalEnabled(false);
     setManualTotalValue(0);
     setFormData(
-      applyLoggedOficina(
+      prepareCreateForm(
         clearCreateSelectValues(
           createEmptyListForm(getCreateTemplate(selectedConfig)),
           selectedConfig.key
@@ -2208,13 +2224,22 @@ export default function GerenciaPage() {
 
   const handleCreate = async () => {
     if (!selectedConfig || !canCreateSelected) return;
-    const formValidationError = getFormValidationError(selectedConfig.key, formData, "create");
+    if (
+      selectedConfig.key === "pedidos" &&
+      normalizeRole(userRole) === "funcionario" &&
+      !userId
+    ) {
+      setError("Não foi possível identificar o funcionário logado. Entre novamente e tente cadastrar o pedido.");
+      return;
+    }
+    const submissionFormData = prepareCreateForm(formData);
+    const formValidationError = getFormValidationError(selectedConfig.key, submissionFormData, "create");
     if (formValidationError) {
       setError(formValidationError);
       return;
     }
     if (selectedConfig.key === "veiculos") {
-      const validationError = getVehicleValidationError(formData);
+      const validationError = getVehicleValidationError(submissionFormData);
       if (validationError) {
         setError(validationError);
         return;
@@ -2230,7 +2255,7 @@ export default function GerenciaPage() {
     setIsLoading(true);
     setError(null);
     const createTemplate = getCreateTemplate(selectedConfig);
-    const rawCreatePayload = buildPayload(createTemplate, formData, "", {
+    const rawCreatePayload = buildPayload(createTemplate, submissionFormData, "", {
       includeArrays: shouldCreateWithArrays(selectedConfig.key),
       entityKey: selectedConfig.key,
       formMode: "create",
@@ -2240,7 +2265,7 @@ export default function GerenciaPage() {
         ? {
             ...rawCreatePayload,
             ...(onlyDigits(
-              getRecordValue(formData, "Cpf_Cnpj") ?? getRecordValue(formData, "CpfCnpj") ?? getRecordValue(formData, "Cpf")
+              getRecordValue(submissionFormData, "Cpf_Cnpj") ?? getRecordValue(submissionFormData, "CpfCnpj") ?? getRecordValue(submissionFormData, "Cpf")
             ).length === 14 ? { sexo: 3 } : {}),
             telefones: Array.isArray(rawCreatePayload.telefones)
               ? rawCreatePayload.telefones.filter(
@@ -2258,7 +2283,7 @@ export default function GerenciaPage() {
     let createPath = selectedConfig.createPath;
 
     if (selectedConfig.key === "veiculos") {
-      const clienteId = Number(getRecordValue(formData, "ClienteId"));
+      const clienteId = Number(getRecordValue(submissionFormData, "ClienteId"));
       if (!Number.isFinite(clienteId) || clienteId <= 0) {
         setError("Selecione o cliente do veículo.");
         setIsLoading(false);
@@ -2295,7 +2320,7 @@ export default function GerenciaPage() {
     if (
       selectedConfig.key !== "clientes" &&
       selectedConfig.updatePath &&
-      hasArrayItems(createTemplate, formData)
+      hasArrayItems(createTemplate, submissionFormData)
     ) {
       createdId = createdId ?? (await resolveCreatedId(result.data));
       if (createdId) {
@@ -2306,7 +2331,7 @@ export default function GerenciaPage() {
             method: "PUT",
             headers: authHeaders,
             body: applyPedidoTotals(
-              buildPayload(selectedConfig.template, formData, "", {
+              buildPayload(selectedConfig.template, submissionFormData, "", {
                 includeArrays: true,
                 parentId: createdId,
                 entityKey: selectedConfig.key,
@@ -2344,7 +2369,7 @@ export default function GerenciaPage() {
       if (!uploaded) return;
     }
 
-    rememberFormRegistrationOptions(formData);
+    rememberFormRegistrationOptions(submissionFormData);
     setShowForm(false);
     await Promise.all([loadList(selectedConfig), loadRegistrationOptions()]);
   };
@@ -3227,6 +3252,12 @@ export default function GerenciaPage() {
         selectedCapability?.scopeToOwnOffice &&
         Boolean(oficinaId) &&
         ["idoficina", "oficinaid"].includes(normalizeFieldKey(key));
+      const isLoggedFuncionarioField =
+        selectedConfig.key === "pedidos" &&
+        path.length === 0 &&
+        normalizeRole(userRole) === "funcionario" &&
+        Boolean(userId) &&
+        normalizeFieldKey(key) === "idfuncionario";
       const loggedOficinaLabel =
         loggedOficinaName ||
         findRelationLabel(relationOptions, "idOficina", oficinaId) ||
@@ -3283,6 +3314,23 @@ export default function GerenciaPage() {
               className="sigo-input"
               type="text"
               value={loggedOficinaLabel || "Oficina logada"}
+              disabled
+            />
+          </label>
+        );
+      }
+
+      if (isLoggedFuncionarioField) {
+        return (
+          <label
+            key={fieldPath.join(".")}
+            className="sigo-label rounded-lg border border-[var(--sigo-border)] bg-[var(--sigo-surface-soft)] p-3"
+          >
+            <span>{formatFieldLabel(key)}</span>
+            <input
+              className="sigo-input"
+              type="text"
+              value={`${fullName || "Funcionário logado"} (#${userId})`}
               disabled
             />
           </label>

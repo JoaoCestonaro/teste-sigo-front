@@ -5,6 +5,16 @@ import type {
   ActionConfig,
 } from "@/components/Table/CrudPanel";
 
+const getTodayIso = (): string => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const TODAY_ISO = getTodayIso();
+
 const telefoneTemplate = {
   Id: 0,
   Numero: "",
@@ -12,11 +22,17 @@ const telefoneTemplate = {
   ClienteId: 0,
 };
 
+const preCadastroTelefoneTemplate = {
+  ddd: 0,
+  numero: "",
+};
+
 const pedidoPecaTemplate = {
   IdPedido: 0,
   IdPeca: 0,
   Quantidade: 0,
-  DataInstalacao: "2026-01-01",
+  ValorUnitario: 0,
+  DataInstalacao: TODAY_ISO,
   Estado: "",
   Observacao: "",
 };
@@ -66,12 +82,12 @@ const clienteSearches: SearchConfig[] = [
   {
     label: "Nome",
     placeholder: "nome",
-    path: (value) => `/api/clientes/nome/${value}`,
+    path: (value) => `/api/v1/clientes/nome/${value}`,
   },
   {
     label: "Oficina",
     placeholder: "oficinaId",
-    path: (value) => `/api/clientes/oficinas/${value}`,
+    path: (value) => `/api/v1/clientes/oficinas/${value}`,
   },
 ];
 
@@ -79,7 +95,7 @@ const funcionarioSearches: SearchConfig[] = [
   {
     label: "Nome",
     placeholder: "nome",
-    path: (value) => `/api/funcionarios/nome/${value}`,
+    path: (value) => `/api/v1/funcionarios/nome/${value}`,
   },
 ];
 
@@ -87,7 +103,7 @@ const oficinaSearches: SearchConfig[] = [
   {
     label: "Nome",
     placeholder: "nome",
-    path: (value) => `/api/oficinas/nome/${value}`,
+    path: (value) => `/api/v1/oficinas/nome/${value}`,
   },
 ];
 
@@ -95,7 +111,7 @@ const marcaSearches: SearchConfig[] = [
   {
     label: "Nome",
     placeholder: "nomeMarca",
-    path: (value) => `/api/marcas/nome/${value}`,
+    path: (value) => `/api/v1/marcas/nome/${value}`,
   },
 ];
 
@@ -103,7 +119,7 @@ const servicoSearches: SearchConfig[] = [
   {
     label: "Nome",
     placeholder: "nome",
-    path: (value) => `/api/servicos/nome/${value}`,
+    path: (value) => `/api/v1/servicos/nome/${value}`,
   },
 ];
 
@@ -111,12 +127,12 @@ const veiculoSearches: SearchConfig[] = [
   {
     label: "Placa",
     placeholder: "placa",
-    path: (value) => `/api/veiculos/placa/${value}`,
+    path: (value) => `/api/v1/veiculos/placa/${value}`,
   },
   {
-    label: "Tipo",
-    placeholder: "tipo",
-    path: (value) => `/api/veiculos/tipo/${value}`,
+    label: "Modelo",
+    placeholder: "modelo",
+    path: (value) => `/api/v1/veiculos/tipo/${value}`,
   },
 ];
 
@@ -124,18 +140,18 @@ const telefoneSearches: SearchConfig[] = [
   {
     label: "Nome",
     placeholder: "nome",
-    path: (value) => `/api/telefones/nome/${value}`,
+    path: (value) => `/api/v1/telefones/nome/${value}`,
   },
 ];
 
 const pedidoActions: ActionConfig[] = [
   {
     label: "Meus servicos",
-    path: "/api/pedidos/me/servicos",
+    path: "/api/v1/pedidos/me/servicos",
   },
   {
     label: "Meus funcionarios",
-    path: "/api/pedidos/me/funcionarios",
+    path: "/api/v1/pedidos/me/funcionarios",
   },
 ];
 
@@ -144,28 +160,45 @@ export const entityConfigs: CrudConfig[] = [
     key: "clientes",
     label: "Cliente",
     description: "CRUD de clientes e telefones.",
-    listPath: "/api/clientes",
-    getByIdPath: (id) => `/api/clientes/${id}`,
-    createPath: "/api/clientes",
-    updatePath: (id) => `/api/clientes/${id}`,
-    deletePath: (id) => `/api/clientes/${id}`,
+    listPath: "/api/v1/clientes",
+    getByIdPath: (id) => `/api/v1/clientes/${id}`,
+    createPath: "/api/v1/clientes",
+    updatePath: (id) => `/api/v1/clientes/${id}`,
+    deletePath: (id) => `/api/v1/clientes/${id}`,
     searches: clienteSearches,
+    createTemplate: {
+      cpf: "",
+      nome: "",
+      email: "",
+      obs: "",
+      razao: "",
+      dataNasc: TODAY_ISO,
+      sexo: 3,
+      numero: 0,
+      rua: "",
+      cidade: "",
+      cep: "",
+      bairro: "",
+      estado: "",
+      pais: "Brasil",
+      complemento: "",
+      telefones: [preCadastroTelefoneTemplate],
+    },
     template: {
       Id: 0,
       Nome: "",
       Email: "",
-      senha: "",
       Cpf_Cnpj: "",
       Obs: "",
       razao: "",
-      DataNasc: "2026-01-01",
+      DataNasc: "",
       Numero: 0,
       Rua: "",
       Cidade: "",
       Cep: "",
       Bairro: "",
       Estado: "",
-      Pais: "",
+      Pais: "Brasil",
       Complemento: "",
       Sexo: 1,
       TipoCliente: 1,
@@ -177,11 +210,11 @@ export const entityConfigs: CrudConfig[] = [
   {
     key: "oficinas",
     label: "Oficina",
-    listPath: "/api/oficinas",
-    getByIdPath: (id) => `/api/oficinas/${id}`,
-    createPath: "/api/oficinas",
-    updatePath: (id) => `/api/oficinas/${id}`,
-    deletePath: (id) => `/api/oficinas/${id}`,
+    listPath: "/api/v1/oficinas",
+    getByIdPath: (id) => `/api/v1/oficinas/${id}`,
+    createPath: "/api/v1/oficinas",
+    updatePath: (id) => `/api/v1/oficinas/${id}`,
+    deletePath: (id) => `/api/v1/oficinas/${id}`,
     searches: oficinaSearches,
     template: {
       Id: 0,
@@ -191,10 +224,10 @@ export const entityConfigs: CrudConfig[] = [
       Numero: 0,
       Rua: "",
       Cidade: "",
-      Cep: 0,
+      Cep: "",
       Bairro: "",
       Estado: "",
-      Pais: "",
+      Pais: "Brasil",
       Complemento: "",
       Senha: "",
       Situacao: 1,
@@ -203,11 +236,11 @@ export const entityConfigs: CrudConfig[] = [
   {
     key: "funcionarios",
     label: "Funcionario",
-    listPath: "/api/funcionarios",
-    getByIdPath: (id) => `/api/funcionarios/${id}`,
-    createPath: "/api/funcionarios",
-    updatePath: (id) => `/api/funcionarios/${id}`,
-    deletePath: (id) => `/api/funcionarios/${id}`,
+    listPath: "/api/v1/funcionarios",
+    getByIdPath: (id) => `/api/v1/funcionarios/${id}`,
+    createPath: "/api/v1/funcionarios",
+    updatePath: (id) => `/api/v1/funcionarios/${id}`,
+    deletePath: (id) => `/api/v1/funcionarios/${id}`,
     searches: funcionarioSearches,
     template: {
       Id: 0,
@@ -216,17 +249,18 @@ export const entityConfigs: CrudConfig[] = [
       Cargo: "",
       Senha: "",
       Email: "",
+      IdOficina: 0,
       Situacao: 1,
     },
   },
   {
     key: "marcas",
     label: "Marca",
-    listPath: "/api/marcas",
-    getByIdPath: (id) => `/api/marcas/${id}`,
-    createPath: "/api/marcas",
-    updatePath: (id) => `/api/marcas/${id}`,
-    deletePath: (id) => `/api/marcas/${id}`,
+    listPath: "/api/v1/marcas",
+    getByIdPath: (id) => `/api/v1/marcas/${id}`,
+    createPath: "/api/v1/marcas",
+    updatePath: (id) => `/api/v1/marcas/${id}`,
+    deletePath: (id) => `/api/v1/marcas/${id}`,
     searches: marcaSearches,
     template: {
       Id: 0,
@@ -238,18 +272,19 @@ export const entityConfigs: CrudConfig[] = [
   {
     key: "servicos",
     label: "Servico",
-    listPath: "/api/servicos",
-    getByIdPath: (id) => `/api/servicos/${id}`,
-    createPath: "/api/servicos",
-    updatePath: (id) => `/api/servicos/${id}`,
-    deletePath: (id) => `/api/servicos/${id}`,
+    listPath: "/api/v1/servicos",
+    getByIdPath: (id) => `/api/v1/servicos/${id}`,
+    createPath: "/api/v1/servicos",
+    updatePath: (id) => `/api/v1/servicos/${id}`,
+    deletePath: (id) => `/api/v1/servicos/${id}`,
     searches: servicoSearches,
     template: {
       Id: 0,
       Nome: "",
       Descricao: "",
       Valor: 0,
-      Garantia: "2026-01-01",
+      Garantia: TODAY_ISO,
+      IdOficina: 0,
       Funcionario_Servicos: [funcionarioServicoTemplate],
     },
     listFields: servicoListFields,
@@ -257,33 +292,35 @@ export const entityConfigs: CrudConfig[] = [
   {
     key: "pecas",
     label: "Peca",
-    listPath: "/api/pecas",
-    getByIdPath: (id) => `/api/pecas/${id}`,
-    createPath: "/api/pecas",
-    updatePath: (id) => `/api/pecas/${id}`,
-    deletePath: (id) => `/api/pecas/${id}`,
+    listPath: "/api/v1/pecas",
+    getByIdPath: (id) => `/api/v1/pecas/${id}`,
+    createPath: "/api/v1/pecas",
+    updatePath: (id) => `/api/v1/pecas/${id}`,
+    deletePath: (id) => `/api/v1/pecas/${id}`,
     template: {
       Id: 0,
       Nome: "",
-      Tipo: "",
+      EAN: "",
       Descricao: "",
       Valor: 0,
       Quantidade: 0,
-      Garantia: "2026-01-01",
+      quantidadeEstoque: 0,
+      Garantia: TODAY_ISO,
       Unidade: 0,
       IdMarca: 0,
-      DataAquisicao: "2026-01-01",
+      DataAquisicao: TODAY_ISO,
       Fornecedor: "",
+      IdOficina: 0,
     },
   },
   {
     key: "pedidos",
     label: "Pedido",
-    listPath: "/api/pedidos",
-    getByIdPath: (id) => `/api/pedidos/${id}`,
-    createPath: "/api/pedidos",
-    updatePath: (id) => `/api/pedidos/${id}`,
-    deletePath: (id) => `/api/pedidos/${id}`,
+    listPath: "/api/v1/pedidos",
+    getByIdPath: (id) => `/api/v1/pedidos/${id}`,
+    createPath: "/api/v1/pedidos",
+    updatePath: (id) => `/api/v1/pedidos/${id}`,
+    deletePath: (id) => `/api/v1/pedidos/${id}`,
     actions: pedidoActions,
     template: {
       Id: 0,
@@ -300,8 +337,9 @@ export const entityConfigs: CrudConfig[] = [
       DescontoPecaPorcentagem: 0,
       descontoPecaReais: 0,
       Observacao: "",
-      DataInicio: "2026-01-01",
-      DataFim: "2026-01-02",
+      DataInicio: TODAY_ISO,
+      DataFim: TODAY_ISO,
+      Status: 0,
       Pedido_Pecas: [pedidoPecaTemplate],
       Pedido_Servicos: [pedidoServicoTemplate],
     },
@@ -310,25 +348,26 @@ export const entityConfigs: CrudConfig[] = [
   {
     key: "telefones",
     label: "Telefone",
-    getByIdPath: (id) => `/api/telefones/${id}`,
-    createPath: "/api/telefones",
-    updatePath: (id) => `/api/telefones/${id}`,
-    deletePath: (id) => `/api/telefones/${id}`,
+    getByIdPath: (id) => `/api/v1/telefones/${id}`,
+    createPath: "/api/v1/telefones",
+    updatePath: (id) => `/api/v1/telefones/${id}`,
+    deletePath: (id) => `/api/v1/telefones/${id}`,
     searches: telefoneSearches,
     template: telefoneTemplate,
   },
   {
     key: "veiculos",
     label: "Veiculo",
-    listPath: "/api/veiculos",
-    createPath: "/api/veiculos",
-    updatePath: (id) => `/api/veiculos/${id}`,
-    deletePath: (id) => `/api/veiculos/${id}`,
+    listPath: "/api/v1/veiculos",
+    getByIdPath: (id) => `/api/v1/veiculos/${id}`,
+    createPath: "/api/v1/veiculos",
+    updatePath: (id) => `/api/v1/veiculos/${id}`,
+    deletePath: (id) => `/api/v1/veiculos/${id}`,
     searches: veiculoSearches,
     template: {
       Id: 0,
       NomeVeiculo: "",
-      TipoVeiculo: "",
+      ModeloVeiculo: "",
       PlacaVeiculo: "",
       ChassiVeiculo: "",
       AnoFab: 2020,
@@ -337,7 +376,6 @@ export const entityConfigs: CrudConfig[] = [
       Seguro: "",
       Cor: "",
       ClienteId: 0,
-      Situacao: 1,
     },
   },
 ];

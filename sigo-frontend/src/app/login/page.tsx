@@ -1,150 +1,222 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
-import { routes } from "@/navigation/routes";
-import { NavBar } from "@/components/Sidebar/NavBar";
-import { TextInput } from "@/components/Form/TextInput";
+import { useState } from "react";
+import { AuthPageLayout } from "@/components/Auth/AuthPageLayout";
 import { PublicOnlyRoute } from "@/components/Auth/RouteGuards";
+import { TextInput } from "@/components/Form/TextInput";
+import { useAuth } from "@/hooks/useAuth";
+import { extractApiError, isValidEmail } from "@/lib/auth-api";
+import { formatCpfCnpj, onlyDigits } from "@/lib/fieldMetadata";
+import { routes } from "@/navigation/routes";
 
-const extractLoginError = (data: unknown): string | null => {
-  if (!data || typeof data !== "object") return null;
-  const record = data as {
-    message?: string;
-    Message?: string;
-    detail?: string;
-    title?: string;
-  };
-  return record.detail ?? record.message ?? record.Message ?? record.title ?? null;
+type FieldErrors = {
+  identifier?: string;
+  password?: string;
+};
+
+type UnifiedLoginResponse = {
+  role?: string;
+  Role?: string;
 };
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, userRole } = useAuth();
-  const [email, setEmail] = useState("");
+  const { login } = useAuth();
+
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const changeIdentifier = (value: string) => {
+    const looksLikeDocument = /^[\d.\-/]*$/.test(value);
+
+    setIdentifier(
+      looksLikeDocument
+        ? formatCpfCnpj(value)
+        : value
+    );
+
+    setFieldErrors((current) => ({
+      ...current,
+      identifier: undefined,
+    }));
+  };
+
+  const validate = (): boolean => {
+    const nextErrors: FieldErrors = {};
+    const value = identifier.trim();
+
+    if (!value) {
+      nextErrors.identifier = "Informe seu CPF/CNPJ ou e-mail.";
+    } else if (value.includes("@")) {
+      if (!isValidEmail(value)) {
+        nextErrors.identifier = "Informe um e-mail válido.";
+      }
+    } else {
+      const digits = onlyDigits(value);
+
+      if (![11, 14].includes(digits.length)) {
+        nextErrors.identifier = "Informe um CPF ou CNPJ válido.";
+      }
+    }
+
+    if (!password) {
+      nextErrors.password = "Informe a senha.";
+    }
+
+    setFieldErrors(nextErrors);
+
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
+
     setError(null);
+
+    if (!validate()) return;
+
     setIsLoading(true);
 
-    const result = await login({ email, password });
+    const result = await login({
+      identifier,
+      password,
+    });
+
     if (result.ok) {
-      router.replace(
-        userRole.toLowerCase() === "cliente" ? routes.clientHome : routes.dashboard
-      );
-    } else {
-      setError(extractLoginError(result.data) ?? "Nao foi possivel entrar.");
+      const response = result.data as UnifiedLoginResponse | null;
+
+      const role = String(
+        response?.role ??
+        response?.Role ??
+        ""
+      ).toLowerCase();
+
+      if (role.includes("cliente")) {
+        router.replace(routes.clientHome);
+        return;
+      }
+
+      if (role.includes("funcionario")) {
+        router.replace(routes.employeeHome);
+        return;
+      }
+
+      // Oficina e Admin
+      router.replace(routes.dashboard);
+      return;
     }
+
+    setError(
+      extractApiError(
+        result.data,
+        "Não foi possível entrar."
+      )
+    );
 
     setIsLoading(false);
   };
 
   return (
     <PublicOnlyRoute>
-      <div className="sigo-page">
-      <NavBar />
-      <main className="sigo-shell flex min-h-[calc(100vh-5rem)] items-center justify-center py-8 lg:py-12">
-        <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl lg:rounded-r-none border border-[var(--sigo-border)] bg-white shadow-[var(--sigo-shadow-lg)] lg:grid-cols-[1.2fr_1fr] lg:divide-x lg:divide-[var(--sigo-border)]">
-          <section className="hidden flex-col justify-between bg-[linear-gradient(to_bottom_right,rgba(8,47,99,0.95),rgba(7,95,189,0.85)),url('https://images.unsplash.com/photo-1615906655593-ad0386982a0f?auto=format&fit=crop&q=80')] bg-cover bg-center p-10 text-white lg:flex">
-            <div className="max-w-xl">
-              <div className="mb-6 flex h-32 w-32 items-center justify-center">
-                <img
-                  src="/sigo-logo.png"
-                  alt="Logo SIGO"
-                  className="h-full w-full object-contain"
-                />
-              </div>
-              <p className="mt-4 text-lg font-bold text-white">
-                Oficina, clientes e serviços em um só paínel
-              </p>
-              <p className="mt-4 max-w-lg text-base leading-7 text-blue-50">
-                Acesse o ambiente administrativo para acompanhar cadastros,
-                pedidos, veículos, peças e serviços com clareza operacional.
-              </p>
+      <AuthPageLayout
+        eyebrow="Acesso ao sistema"
+        title="Entrar"
+        description="Informe suas credenciais para entrar no SIGO."
+      >
+        <form
+          className="grid gap-5 p-6"
+          onSubmit={handleSubmit}
+          noValidate
+        >
+          <TextInput
+            id="login-identifier"
+            name="identifier"
+            label="CPF/CNPJ ou e-mail"
+            value={identifier}
+            onChange={changeIdentifier}
+            placeholder="CPF/CNPJ ou e-mail"
+            type="text"
+            autoComplete="username"
+            maxLength={254}
+            error={fieldErrors.identifier}
+            disabled={isLoading}
+            required
+          />
+
+          <TextInput
+            id="login-password"
+            name="password"
+            label="Senha"
+            value={password}
+            onChange={(value) => {
+              setPassword(value);
+
+              setFieldErrors((current) => ({
+                ...current,
+                password: undefined,
+              }));
+            }}
+            type="password"
+            autoComplete="current-password"
+            maxLength={128}
+            error={fieldErrors.password}
+            disabled={isLoading}
+            showPasswordToggle
+            required
+          />
+
+          {error ? (
+            <div
+              className="sigo-error px-4 py-3 text-sm font-semibold"
+              role="alert"
+            >
+              {error}
             </div>
+          ) : null}
 
-           
-          </section>
+          <button
+            type="submit"
+            className="sigo-button sigo-button-primary w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? "Entrando..." : "Entrar"}
+          </button>
 
-          <section className="flex flex-col bg-white">
-            <div className="border-b border-[var(--sigo-border)] px-8 py-8">
-            <div className="mb-6 flex items-center gap-3 lg:hidden">
-              <span className="flex h-20 w-20 items-center justify-center">
-                <img
-                  src="/sigo-logo.png"
-                  alt="Logo SIGO"
-                  className="h-full w-full object-contain"
-                />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-[var(--sigo-muted)]">
-                  Sistema de gestão de oficinas
-                </p>
-              </div>
-            </div>
+          <div className="-mx-6 flex flex-col gap-2 border-t border-[var(--sigo-border)] px-6 pt-5 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-[var(--sigo-muted)]">
+              Esqueceu sua senha?
+            </span>
 
-            <p className="text-sm font-bold text-[var(--sigo-blue)]">
-              Acesso ao sistema
-            </p>
-            <h2 className="mt-2 text-3xl font-black text-[var(--sigo-text)]">
-              Entrar
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--sigo-muted)]">
-              Informe suas credenciais para entrar no SIGO.
-            </p>
+            <Link
+              className="font-bold text-[var(--sigo-blue)] hover:text-[var(--sigo-blue-dark)]"
+              href={routes.forgotPassword}
+            >
+              Redefinir senha
+            </Link>
           </div>
 
-          <form className="grid gap-5 p-6" onSubmit={handleSubmit}>
-            <TextInput
-              label="Email"
-              value={email}
-              onChange={setEmail}
-              type="email"
-            />
-            <TextInput
-              label="Senha"
-              value={password}
-              onChange={setPassword}
-              type="password"
-            />
+          <div className="-mx-6 flex flex-col gap-2 border-t border-[var(--sigo-border)] px-6 pt-5 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-[var(--sigo-muted)]">
+              Ainda não tem uma conta?
+            </span>
 
-            {error ? (
-              <div className="sigo-error px-4 py-3 text-sm font-semibold">
-                {error}
-              </div>
-            ) : null}
-
-            <button
-              type="submit"
-              className="sigo-button sigo-button-primary w-full"
-              disabled={isLoading}
+            <Link
+              className="font-bold text-[var(--sigo-blue)] hover:text-[var(--sigo-blue-dark)]"
+              href={routes.register}
             >
-              {isLoading ? "Entrando..." : "Entrar"}
-            </button>
-
-            <div className="flex flex-col gap-2 border-t border-[var(--sigo-border)] pt-5 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-[var(--sigo-muted)]">
-                Ainda não tem conta?
-              </span>
-              <Link
-                className="font-bold text-[var(--sigo-blue)] hover:text-[var(--sigo-blue-dark)]"
-                href={routes.register}
-              >
-                Criar Conta
-              </Link>
-            </div>
-
-            </form>
-          </section>
-        </div>
-      </main>
-      </div>
+              Criar conta
+            </Link>
+          </div>
+        </form>
+      </AuthPageLayout>
     </PublicOnlyRoute>
   );
 }

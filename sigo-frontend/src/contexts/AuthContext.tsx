@@ -11,11 +11,6 @@ const defaultBaseUrl =
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
-const loginRoutes = [
-  "/api/clientes/login",
-  "/api/oficinas/login",
-  "/api/funcionarios/login",
-];
 
 const sanitizeToken = (value: string): string =>
   value.trim().replace(/^Bearer\s+/i, "").replace(/^"|"$/g, "");
@@ -102,15 +97,63 @@ const getFullNameFromToken = (token: string): string => {
   return fullName;
 };
 
+const getEmailFromToken = (token: string): string => {
+  const payload = decodeJwtPayload(token);
+  return getStringClaim(payload, [
+    "email",
+    "Email",
+    "mail",
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+  ]);
+};
+
+const getNumericClaim = (
+  payload: Record<string, unknown> | null,
+  names: string[]
+): number | null => {
+  if (!payload) return null;
+
+  for (const name of names) {
+    const rawValue = payload[name];
+    const parsed = Number(rawValue);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+
+  return null;
+};
+
+const getUserIdFromToken = (token: string): number | null => {
+  const payload = decodeJwtPayload(token);
+  return getNumericClaim(payload, [
+    "id",
+    "Id",
+    "ID",
+    "userId",
+    "UserId",
+    "usuarioId",
+    "UsuarioId",
+    "clienteId",
+    "ClienteId",
+    "funcionarioId",
+    "FuncionarioId",
+    "oficinaId",
+    "OficinaId",
+    "sub",
+    "nameid",
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier",
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/nameidentifier",
+  ]);
+};
+
 const getOficinaIdFromToken = (token: string): number | null => {
   const payload = decodeJwtPayload(token);
-  const rawValue =
-    payload?.oficina_id ??
-    payload?.OficinaId ??
-    payload?.oficinaId;
-
-  const parsed = Number(rawValue);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  return getNumericClaim(payload, [
+    "oficina_id",
+    "oficinaId",
+    "OficinaId",
+    "idOficina",
+    "IdOficina",
+  ]);
 };
 
 const getRoleFromToken = (token: string): string => {
@@ -152,61 +195,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setBaseUrlState(value);
   }, []);
 
-  const login = async (payload: AuthLoginPayload): Promise<ApiResult> => {
-    const normalizedEmail = payload.email.trim().toLowerCase();
-    let lastResult: ApiResult | null = null;
+const login = async (payload: AuthLoginPayload): Promise<ApiResult> => {
+  const result = await fetchJson(baseUrl, "/api/v1/auth/login", {
+    method: "POST",
+    body: {
+      identifier: payload.identifier.trim(),
+      password: payload.password,
+    },
+  });
 
-    for (const route of loginRoutes) {
-      const result = await fetchJson(baseUrl, route, {
-        method: "POST",
-        body: {
-          email: normalizedEmail,
-          password: payload.password,
-        },
-      });
-      lastResult = result;
-
-      if (result.ok && typeof result.data === "object" && result.data) {
-        const pickToken = (value: unknown): string | null => {
-          if (!value || typeof value !== "object") return null;
-          const record = value as { token?: string; Token?: string };
-          return record.token ?? record.Token ?? null;
-        };
-        const envelope = result.data as {
-          data?: { token?: string; Token?: string } | string | null;
-          Data?: { Token?: string; token?: string } | string | null;
-          token?: string;
-          Token?: string;
-        };
-        const tokenValue =
-          (typeof envelope.data === "string" ? envelope.data : null) ??
-          (typeof envelope.Data === "string" ? envelope.Data : null) ??
-          pickToken(envelope.data) ??
-          pickToken(envelope.Data) ??
-          envelope.token ??
-          envelope.Token ??
-          "";
-        if (tokenValue) setToken(sanitizeToken(tokenValue));
-        return result;
-      }
-
-      if (result.ok && typeof result.data === "string") {
-        const tokenValue = sanitizeToken(result.data);
-        if (tokenValue) setToken(tokenValue);
-        return result;
-      }
-    }
-
-    return lastResult ?? {
-      ok: false,
-      status: 500,
-      data: null,
+  if (result.ok && typeof result.data === "object" && result.data) {
+    const record = result.data as {
+      accessToken?: string;
+      AccessToken?: string;
+      token?: string;
+      Token?: string;
     };
-  };
 
-  const logout = () => setToken("");
+    const tokenValue =
+      record.accessToken ??
+      record.AccessToken ??
+      record.token ??
+      record.Token ??
+      "";
+
+    if (tokenValue) {
+      setToken(sanitizeToken(tokenValue));
+    }
+  }
+
+  return result;
+};
+
+  const logout = () => {
+    setToken("");
+    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      window.location.replace("/login");
+    }
+  };
   const userName = useMemo(() => getFirstNameFromToken(token), [token]);
   const fullName = useMemo(() => getFullNameFromToken(token), [token]);
+  const userEmail = useMemo(() => getEmailFromToken(token), [token]);
+  const userId = useMemo(() => getUserIdFromToken(token), [token]);
   const userRole = useMemo(() => getRoleFromToken(token), [token]);
   const oficinaId = useMemo(() => getOficinaIdFromToken(token), [token]);
 
@@ -218,13 +248,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken,
       userName,
       fullName,
+      userEmail,
+      userId,
       userRole,
       oficinaId,
       login,
       logout,
       isReady,
     }),
-    [baseUrl, token, userName, fullName, userRole, oficinaId, isReady]
+    [
+      baseUrl,
+      token,
+      userName,
+      fullName,
+      userEmail,
+      userId,
+      userRole,
+      oficinaId,
+      isReady,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

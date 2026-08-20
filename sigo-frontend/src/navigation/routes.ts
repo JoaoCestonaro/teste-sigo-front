@@ -1,10 +1,15 @@
 export const routes = {
   login: "/login",
   dashboard: "/dashboard",
+  employeeHome: "/dashboard",
   clientHome: "/cliente",
+  profile: "/perfil",
   management: "/dashboard/gerencia",
   analytics: "/dashboard/analise-metricas",
+  audit: "/dashboard/auditoria",
   register: "/cadastro",
   registerCliente: "/cadastro/cliente",
   registerOficina: "/cadastro/oficina",
+  forgotPassword: "/esqueci-senha",
+  resetPassword: "/redefinir-senha",
 } as const;

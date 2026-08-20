@@ -1,7 +1,7 @@
 import type { ApiResult } from "@/lib/api";
 
 export type AuthLoginPayload = {
-  email: string;
+  identifier: string;
   password: string;
 };
 
@@ -12,6 +12,8 @@ export type AuthContextValue = {
   setToken: (value: string) => void;
   userName: string;
   fullName: string;
+  userEmail: string;
+  userId: number | null;
   userRole: string;
   oficinaId: number | null;
   login: (payload: AuthLoginPayload) => Promise<ApiResult>;
